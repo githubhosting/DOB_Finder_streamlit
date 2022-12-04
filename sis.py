@@ -4,6 +4,7 @@ from datetime import date
 from typing import Union
 from threading import Thread
 from urllib.parse import urlparse
+
 import streamlit as st
 
 from scraper import Scraper, cached, gen_usn
@@ -216,9 +217,29 @@ def micro(head: str, year: str, dept: str, rollnum):
                 f"{stat['photo']}," \
                 f""
             print(write)
+            result1 = stat['sgpa']
+            result = float(result1)
+            if result >= 10.0:
+                emoji = "🎉 Damn! You are a genius"
+            elif result >= 9.0:
+                emoji = "🎉"
+            elif result >= 8.0:
+                emoji = "😀"
+            elif result >= 7.0:
+                emoji = "🙂"
+            elif result >= 6.0:
+                emoji = "😐"
+            elif result >= 5.0:
+                emoji = "🙁"
+            elif result >= 4.0:
+                emoji = "😭"
+            else:
+                emoji = "😢"
+
             profile_image = f"{stat['photo']}"
             st.image(profile_image, caption=stat['name'], use_column_width=True)
-            st.subheader(f'CGPA: {stat["sgpa"]}')
+            st.write(f"CGPA of Even sem:")
+            st.subheader(f'{result}     {emoji}')
 
 
 if __name__ == '__main__':
@@ -229,18 +250,16 @@ if __name__ == '__main__':
             """Checks whether a password entered by the user is correct."""
             if st.session_state["password"] == st.secrets["password"]:
                 st.session_state["password_correct"] = True
-                del st.session_state["password"]
+                # del st.session_state["password"]
             else:
                 st.session_state["password_correct"] = False
 
         if "password_correct" not in st.session_state:
-            # First run, show input for password.
             st.text_input(
-                "Enter the Password", type="password", on_change=password_entered, key="password"
+                "Enter the Password to access 🫣", type="password", on_change=password_entered, key="password"
             )
             return False
         elif not st.session_state["password_correct"]:
-            # Password not correct, show input + error.
             st.text_input(
                 "Password", type="password", on_change=password_entered, key="password"
             )
@@ -253,37 +272,41 @@ if __name__ == '__main__':
 
     if check_password():
         HEAD = "1MS"
-        st.title("Find Anyone's Data just using USN")
+        st.header("Find Anyone's Data just using USN")
         usn = st.text_input("Enter your USN")
         check = False
         if len(usn) == 10:
             check = True
         btn = st.button("Find DOB")
-        cgpa = st.button("Find CGPA")
+        cgpa = False
+        if usn:
+            if check is False:
+                st.error("Invalid USN")
         if check or btn:
             roll = int(usn[7:10])
             DEPT = usn[5:7].upper()
             YEAR = usn[3:5]
             macro(HEAD, YEAR, DEPT, dry=False)
+            cgpa = st.button("Find CGPA")
         if cgpa:
             roll = int(usn[7:10])
             DEPT = usn[5:7].upper()
             YEAR = usn[3:5]
             micro(HEAD, YEAR, DEPT, roll)
 
-    hide_streamlit_style = """
+hide_streamlit_style = """
                 <style>
-                #MainMenu {visibility: hidden;}
+                # MainMenu {visibility: hidden;}
                 footer {visibility: hidden;}
                 footer:after {
                 content:'Made with ❤️ by Amith and Shravan'; 
                 visibility: visible;
 	            display: block;
 	            position: relative;
-	            #background-color: red;
-	            padding: 5px;
+	            # background-color: red;
+	            padding: 15px;
 	            top: 2px;
 	            }
                 </style>
                 """
-    st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
