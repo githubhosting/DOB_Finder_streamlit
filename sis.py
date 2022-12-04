@@ -1,9 +1,12 @@
 import pickle
 import time
+from datetime import date
 from typing import Union
 from threading import Thread
+
 import streamlit as st
-from scraper import Scraper, cached, gen_usn, roll_range
+from scraper import Scraper, cached, gen_usn
+from exam_class import micro
 
 
 def get_cache():
@@ -56,6 +59,7 @@ class SisScraper(Scraper):
             "sem": td[2].text.split(":")[1].strip(),
             "quota": td[3].text.split(":")[1].strip(),
             "mobile": td[4].text.split(":")[1].strip(),
+            "phone": td[5].text.split(":")[1].strip(),
             "course": td[6].text.split(":")[1].strip(),
             "category": td[8].text.split(":")[1].strip(),
             "class": body.find_all("p")[6].text.strip(),
@@ -76,12 +80,14 @@ class SisScraper(Scraper):
         yield stats
 
     @cached(get_cache())
+    @st.cache
     def get_dob(self, usn) -> Union[str, None]:
         join_year = int("20" + usn[3:5])
         for year in [y := join_year - 18, y - 1, y + 1, y - 2]:
             if dob := self.brute_year(usn, year): return dob
 
     @cached(get_cache())
+    @st.cache
     def brute_year(self, usn: str, year: int) -> Union[str, None]:
         workers = []
         dob = [None]
@@ -128,22 +134,44 @@ def macro(head: str, year: str, dept: str, file=None, dry: bool = False):
                 f"{stat['name']:64}," \
                 f"{stat['dob']:10}," \
                 f""
+            dob = date.fromisoformat(stat['dob'])
+            formated_dob = dob.strftime("%d %B %Y")
+
             disp = \
                 f"Time taken: {time.time() - t:10.2f}sec"
             disp1 = f"Name: {stat['name']}"
             print(f"[Log] {time.time() - t:07.3f}sec :", write)
             st.write(disp)
             st.subheader(disp1)
-            st.subheader(f"DOB: {stat['dob']}")
+            st.write(f"Date of Birth is:")
+            st.subheader(f" {formated_dob}")
+            more = st.button("More Details")
+            if more:
+                st.write(f"USN: {stat['usn']}")
+                st.write(f"Email: {stat['email']}")
+                st.write(f"Semester: {stat['sem']}")
+                st.write(f"Quota: {stat['mobile']}")
+                st.write(f"Phone: {stat['phone']}")
+                st.write(f"Course: {stat['course']}")
+                st.write(f"Category: {stat['category']}")
+                st.write(f"Class: {stat['class']}")
+                st.write(f"Batch: {stat['batch']}")
+                st.write(f"Paid: {stat['paid']}")
             t = time.time()
             SIS.save_cache()
 
 
 if __name__ == '__main__':
     HEAD = "1MS"
-    st.title("## Find Your Date of birth")
+    # password = st.text_input("Enter Password", type="password")
+    # if password == "shravan1234":
+    st.title("Find Anyones Data just using USN")
     usn = st.text_input("Enter your USN")
-    if usn:
+    check = False
+    if len(usn) == 10:
+        check = True
+    btn = st.button("Find DOB")
+    if check or btn:
         roll = int(usn[7:10])
         DEPT = usn[5:7].upper()
         YEAR = usn[3:5]

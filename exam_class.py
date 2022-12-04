@@ -1,7 +1,7 @@
 import os
 import tempfile
 from urllib.parse import urlparse
-
+import streamlit as st
 from scraper import Scraper, gen_usn, roll_range
 
 
@@ -34,15 +34,13 @@ class ExamScraper(Scraper):
         if _range is None: _range = roll_range()
         payload = gen_payload()
         tol = tolerate
-        for roll in _range:
-            if tol <= 0: return
-            payload["usn"] = gen_usn(year, dept, roll, head)
-            stats = self.get_stats(payload)
-            if not stats:
-                tol -= 1
-                continue
-            tol = tolerate
-            yield stats
+        if tol <= 0: return
+        payload["usn"] = gen_usn(year, dept, roll, head)
+        stats = self.get_stats(payload)
+        if not stats:
+            tol -= 1
+        tol = tolerate
+        yield stats
 
 
 def gen_payload() -> dict[str, str]:
@@ -68,6 +66,7 @@ def macro(head: str, year: str, dept: str, file=None, dry: bool = False):
             f""
         if not dry: f.write(write + "\n")
         print(write)
+
         for stat in EXAM.get_dept(head, year, dept):
             write = \
                 f"{stat['usn']:{len(head + year + dept) + 3 + 5}}," \
@@ -75,8 +74,6 @@ def macro(head: str, year: str, dept: str, file=None, dry: bool = False):
                 f"{stat['sgpa']:5}," \
                 f"{stat['photo']}," \
                 f""
-            if not dry:
-                f.write(write + "\n")
             print(write)
 
 
@@ -97,11 +94,21 @@ def micro(head: str, year: str, dept: str, start, stop=None):
                 f"{stat['photo']}," \
                 f""
             print(write)
+            profile_image = f"{stat['photo']}"
+            st.image(profile_image, caption=stat['name'], use_column_width=True)
+            st.subheader(f'CGPA: {stat["sgpa"]}')
 
 
 if __name__ == '__main__':
     HEAD = "1MS"
-    YEAR = "21"
-    DEPT = "IS"
-    macro(HEAD, YEAR, DEPT, dry=True)
-    # micro(HEAD, YEAR, DEPT, start=1, stop=None)
+    st.title("Find Anyones CGPA just using USN")
+    usn = st.text_input("Enter your USN")
+    check = False
+    if len(usn) == 10:
+        check = True
+    btn = st.button("Check CGPA")
+    if check or btn:
+        roll = int(usn[7:10])
+        DEPT = usn[5:7].upper()
+        YEAR = usn[3:5]
+        micro(HEAD, YEAR, DEPT, roll)
