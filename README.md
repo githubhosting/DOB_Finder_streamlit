@@ -1,8 +1,8 @@
-# DOB Finder
+# Find your friends Date of Birth
 
-## Find the DOB of a person using their USN
+#### Find the DOB and CGPA of anyone with just using their USN
 
-## Link to the website: [https://dob-finder-sis.streamlit.app/](https://dob-finder-sis.streamlit.app/)
+### Link to the website: [DOB Finder](https://dob-finder-sis.streamlit.app/)
 
 ## How to use
 
