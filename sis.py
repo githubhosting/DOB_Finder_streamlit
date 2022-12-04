@@ -6,7 +6,7 @@ from threading import Thread
 
 import streamlit as st
 from scraper import Scraper, cached, gen_usn
-from exam_class import micro
+import streamlit.components.v1 as components
 
 
 def get_cache():
@@ -162,10 +162,26 @@ def macro(head: str, year: str, dept: str, file=None, dry: bool = False):
 
 
 if __name__ == '__main__':
+    hide_streamlit_style = """
+                <style>
+                #MainMenu {visibility: hidden;}
+                footer {visibility: hidden;}
+                footer:after {
+                content:'Made with ❤️ by Amith and Shravan'; 
+                visibility: visible;
+	            display: block;
+	            position: relative;
+	            #background-color: red;
+	            padding: 5px;
+	            top: 2px;
+	            }
+                </style>
+                """
+    st.markdown(hide_streamlit_style, unsafe_allow_html=True)
     HEAD = "1MS"
     # password = st.text_input("Enter Password", type="password")
     # if password == "shravan1234":
-    st.title("Find Anyones Data just using USN")
+    st.title("Find Anyone's Data just using USN")
     usn = st.text_input("Enter your USN")
     check = False
     if len(usn) == 10:
@@ -176,3 +192,5 @@ if __name__ == '__main__':
         DEPT = usn[5:7].upper()
         YEAR = usn[3:5]
         macro(HEAD, YEAR, DEPT, dry=False)
+    else:
+        st.write("Enter a valid USN")
