@@ -260,7 +260,7 @@ if __name__ == '__main__':
             check = True
         btn = st.button("Find DOB")
         cgpa = st.button("Find CGPA")
-        if check & btn:
+        if check or btn:
             roll = int(usn[7:10])
             DEPT = usn[5:7].upper()
             YEAR = usn[3:5]
