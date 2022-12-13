@@ -136,13 +136,14 @@ def macro(head: str, year: str, dept: str, file=None, dry: bool = False):
                 f""
             dob = date.fromisoformat(stat['dob'])
             formated_dob = dob.strftime("%d %B %Y")
+            time_taken = f"Time taken: {time.time() - t:.2f}sec"
 
-            disp = \
-                f"Time taken: {time.time() - t:10.2f}sec"
-            disp1 = f"Name: {stat['name']}"
+            name = f"Name: {stat['name']}"
             print(f"[Log] {time.time() - t:07.3f}sec :", write)
-            st.write(disp)
-            st.subheader(disp1)
+            if time.time() - t < 1:
+                time_taken = f"Time taken: {time.time() - t:10.2f}sec and that was fast!"
+            st.write(time_taken)
+            st.subheader(name)
             st.write(f"Date of Birth is:")
             st.subheader(f" {formated_dob}")
             more = st.button("More Details")
@@ -277,7 +278,7 @@ if __name__ == '__main__':
         check = False
         if len(usn) == 10:
             check = True
-        btn = st.button("Find DOB")
+        btn = st.button("Get Data")
         cgpa = False
         if usn:
             if check is False:
@@ -287,11 +288,6 @@ if __name__ == '__main__':
             DEPT = usn[5:7].upper()
             YEAR = usn[3:5]
             macro(HEAD, YEAR, DEPT, dry=False)
-            cgpa = st.button("Find CGPA")
-        if cgpa:
-            roll = int(usn[7:10])
-            DEPT = usn[5:7].upper()
-            YEAR = usn[3:5]
             micro(HEAD, YEAR, DEPT, roll)
 
 hide_streamlit_style = """
