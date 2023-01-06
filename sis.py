@@ -119,49 +119,6 @@ class SisScraper(Scraper):
         super(SisScraper, self).__exit__(exc_type, exc_val, exc_tb)
 
 
-def macro(head: str, year: str, dept: str, file=None, dry: bool = False):
-    with SisScraper() as SIS:
-        write = \
-            f"{'usn':{len(head + year + dept) + 3 + 5}}," \
-            f"{'name':64}," \
-            f"{'dob':10}," \
-            f""
-        print(f"[Log] {'Time':10} :", write)
-        t = time.time()
-        for stat in SIS.get_dept(head, year, dept):
-            write = \
-                f"{stat['usn']:{len(head + year + dept) + 3 + 5}}," \
-                f"{stat['name']:64}," \
-                f"{stat['dob']:10}," \
-                f""
-            dob = date.fromisoformat(stat['dob'])
-            formated_dob = dob.strftime("%d %B %Y")
-            time_taken = f"Time taken: {time.time() - t:.2f}sec"
-
-            name = f"Name: {stat['name']}"
-            print(f"[Log] {time.time() - t:07.3f}sec :", write)
-            if time.time() - t < 1:
-                time_taken = f"Time taken: {time.time() - t:10.2f}sec and that was fast!"
-            st.write(time_taken)
-            st.subheader(name)
-            st.write(f"Date of Birth is:")
-            st.subheader(f" {formated_dob}")
-            more = st.button("More Details")
-            if more:
-                st.write(f"USN: {stat['usn']}")
-                st.write(f"Email: {stat['email']}")
-                st.write(f"Semester: {stat['sem']}")
-                st.write(f"Quota: {stat['mobile']}")
-                st.write(f"Phone: {stat['phone']}")
-                st.write(f"Course: {stat['course']}")
-                st.write(f"Category: {stat['category']}")
-                st.write(f"Class: {stat['class']}")
-                st.write(f"Batch: {stat['batch']}")
-                st.write(f"Paid: {stat['paid']}")
-            t = time.time()
-            SIS.save_cache()
-
-
 class ExamScraper(Scraper):
     def __init__(self, url="https://exam.msrit.edu/"):
         self.URL = url + ("/" if url[-1] != "/" else "")
@@ -187,16 +144,6 @@ class ExamScraper(Scraper):
             "photo": f"{url[0]}://{url[1]}" + body.find_all("img")[1]['src'],
         }
 
-    def get_dept(self, head: str, year: str, dept: str, tolerate: int = 5):
-        payload = gen_payload1()
-        tol = tolerate
-        if tol <= 0: return
-        payload["usn"] = gen_usn(year, dept, roll, head)
-        stats = self.get_stats(payload)
-        if not stats:
-            tol -= 1
-        yield stats
-
 
 def gen_payload1() -> dict[str, str]:
     return {
@@ -208,39 +155,36 @@ def gen_payload1() -> dict[str, str]:
     }
 
 
-def micro(head: str, year: str, dept: str, rollnum):
+def micro(usn: str):
+    if usn[-1].upper() == "T": return
     with ExamScraper("https://exam.msrit.edu/eresultseven/") as EXAM:
-        for stat in EXAM.get_dept(head, year, dept, rollnum):
-            write = \
-                f"{stat['usn']:{len(head + year + dept) + 3 + 5}}," \
-                f"{stat['name']:64}," \
-                f"{stat['sgpa']:5}," \
-                f"{stat['photo']}," \
-                f""
-            print(write)
-            result1 = stat['sgpa']
-            result = float(result1)
-            if result >= 10.0:
-                emoji = "🎉 Damn! You are a genius"
-            elif result >= 9.0:
-                emoji = "🎉"
-            elif result >= 8.0:
-                emoji = "😀"
-            elif result >= 7.0:
-                emoji = "🙂"
-            elif result >= 6.0:
-                emoji = "😐"
-            elif result >= 5.0:
-                emoji = "🙁"
-            elif result >= 4.0:
-                emoji = "😭"
-            else:
-                emoji = "😢"
+        pl = gen_payload1()
+        pl["usn"] = usn
+        stat = EXAM.get_stats(pl)
 
-            profile_image = f"{stat['photo']}"
-            st.image(profile_image, caption=stat['name'], use_column_width=True)
-            st.write(f"CGPA of Even sem:")
-            st.subheader(f'{result}     {emoji}')
+        result1 = stat['sgpa']
+        result = float(result1)
+        if result >= 10.0:
+            emoji = "🎉 Damn! You are a genius"
+        elif result >= 9.0:
+            emoji = "🎉"
+        elif result >= 8.0:
+            emoji = "😀"
+        elif result >= 7.0:
+            emoji = "🙂"
+        elif result >= 6.0:
+            emoji = "😐"
+        elif result >= 5.0:
+            emoji = "🙁"
+        elif result >= 4.0:
+            emoji = "😭"
+        else:
+            emoji = "😢"
+
+        profile_image = f"{stat['photo']}"
+        st.image(profile_image, caption=stat['name'], use_column_width=True)
+        st.write(f"CGPA of Even sem:")
+        st.subheader(f'{result}     {emoji}')
 
 
 if __name__ == '__main__':
@@ -276,7 +220,7 @@ if __name__ == '__main__':
         st.header("Find Anyone's Data just using USN")
         usn = st.text_input("Enter your USN")
         check = False
-        if len(usn) == 10:
+        if len(usn) in [10, 12]:
             check = True
         btn = st.button("Get Data")
         cgpa = False
@@ -284,11 +228,47 @@ if __name__ == '__main__':
             if check is False:
                 st.error("Invalid USN")
         if check or btn:
-            roll = int(usn[7:10])
-            DEPT = usn[5:7].upper()
-            YEAR = usn[3:5]
-            macro(HEAD, YEAR, DEPT, dry=False)
-            micro(HEAD, YEAR, DEPT, roll)
+            with SisScraper() as SIS:
+                t = time.time()
+                dob = SIS.get_dob(f"{usn}")
+                t = time.time() - t
+
+                time_taken = f"Time taken: {t:.2f}sec"
+                st.write(time_taken)
+                dobf = date.fromisoformat(dob)
+                formated_dob = dobf.strftime("%d %B %Y")
+
+                pl = gen_payload()
+                pl["username"] = usn
+                pl["passwd"] = dob
+                stat = SIS.get_stats(pl)
+                if stat:
+                    name = f"Name: {stat['name']}"
+                    st.subheader(name)
+                    st.write(f"Date of Birth is:")
+                    st.subheader(f" {formated_dob}")
+                    more = st.button("More Details")
+                    if more:
+                        st.write(f"USN: {stat['usn']}".upper())
+                        st.write(f"Email: {stat['email']}")
+                        st.write(f"Semester: {stat['sem']}")
+                        st.write(f"Quota: {stat['mobile']}")
+                        st.write(f"Phone: {stat['phone']}")
+                        st.write(f"Course: {stat['course']}")
+                        st.write(f"Category: {stat['category']}")
+                        st.write(f"Class: {stat['class']}")
+                        st.write(f"Batch: {stat['batch']}")
+                        st.write(f"Paid: {stat['paid']}")
+                        sumf = 0
+                        for p in stat['paid']:
+                            sumf += float(p.replace("Rs.", "").replace(",", ""))
+                        st.write(f"Total Fees Paid: Rs.{sumf}")
+                    SIS.save_cache()
+                else:
+                    st.error("Invalid USN or DOB")
+                    st.error("Try again")
+
+            micro(usn)
 
 hide_streamlit_style = """
                 <style>
@@ -299,7 +279,6 @@ hide_streamlit_style = """
                 visibility: visible;
 	            display: block;
 	            position: relative;
-	            # background-color: red;
 	            padding: 15px;
 	            top: 2px;
 	            }
