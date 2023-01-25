@@ -1,5 +1,6 @@
 import pickle
 import time
+import webbrowser
 from datetime import date
 from typing import Union
 from threading import Thread
@@ -80,14 +81,14 @@ class SisScraper(Scraper):
         yield stats
 
     @cached(get_cache())
-    # @st.cache
+    @st.cache
     def get_dob(self, usn) -> Union[str, None]:
         join_year = int("20" + usn[3:5])
         for year in [y := join_year - 18, y - 1, y + 1, y - 2]:
             if dob := self.brute_year(usn, year): return dob
 
     @cached(get_cache())
-    # @st.cache
+    @st.cache
     def brute_year(self, usn: str, year: int) -> Union[str, None]:
         workers = []
         dob = [None]
@@ -244,7 +245,6 @@ if __name__ == '__main__':
                 if dob is None:
                     st.error("Not Found")
                     st.stop()
-
                 dobf = date.fromisoformat(dob)
                 formated_dob = dobf.strftime("%d %B %Y")
 
@@ -259,6 +259,7 @@ if __name__ == '__main__':
                     st.subheader(f" {formated_dob}")
                     more = st.button("More Details")
                     if more:
+                        st.write(f"https://upylba53h2.execute-api.us-east-1.amazonaws.com/sis?usn={usn}&dob={dob}")
                         st.write(f"USN: {stat['usn']}".upper())
                         st.write(f"Email: {stat['email']}")
                         st.write(f"Semester: {stat['sem']}")
